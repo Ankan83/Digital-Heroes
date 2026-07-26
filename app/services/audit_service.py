@@ -29,16 +29,34 @@ class AuditService:
         self.cache = cache or create_cache()
         self.semaphore = asyncio.Semaphore(settings.max_concurrency)
 
-        # Configure HTTP client with timeouts and redirect limits
-        limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
-        self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(
-                connect=5.0, read=settings.audit_timeout_seconds, write=5.0, pool=5.0
-            ),
-            limits=limits,
-            follow_redirects=True,
-            headers={"User-Agent": "URL-Audit-Service/1.0"},
-        )
+        # Lazily created per event loop to avoid cross-loop reuse issues.
+        self.client: Optional[httpx.AsyncClient] = None
+        self.client_loop: Optional[asyncio.AbstractEventLoop] = None
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get an HTTP client bound to the current event loop."""
+        current_loop = asyncio.get_running_loop()
+
+        if (
+            self.client is None
+            or self.client.is_closed
+            or self.client_loop is not current_loop
+        ):
+            if self.client is not None and not self.client.is_closed:
+                await self.client.aclose()
+
+            limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
+            self.client = httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    connect=5.0, read=settings.audit_timeout_seconds, write=5.0, pool=5.0
+                ),
+                limits=limits,
+                follow_redirects=True,
+                headers={"User-Agent": "URL-Audit-Service/1.0"},
+            )
+            self.client_loop = current_loop
+
+        return self.client
 
     async def audit(self, raw_url: str, request_id: str) -> Dict[str, Any]:
         """
@@ -83,9 +101,10 @@ class AuditService:
     async def _perform_audit(self, url: str, request_id: str) -> Dict[str, Any]:
         """Perform the actual HTTP audit."""
         start_time = time.time()
+        client = await self._get_client()
 
         try:
-            response = await self.client.get(url)
+            response = await client.get(url)
         except httpx.TimeoutException:
             raise AuditError(
                 "TIMEOUT",
@@ -121,7 +140,10 @@ class AuditService:
 
     async def close(self):
         """Close the HTTP client."""
-        await self.client.aclose()
+        if self.client is not None and not self.client.is_closed:
+            await self.client.aclose()
+        self.client = None
+        self.client_loop = None
 
 
 # Global service instance
