@@ -38,7 +38,11 @@ class AuditService:
         current_loop = asyncio.get_running_loop()
 
         if self.client is None or self.client.is_closed or self.client_loop is not current_loop:
-            if self.client is not None and not self.client.is_closed:
+            if (
+                self.client is not None
+                and not self.client.is_closed
+                and self.client_loop is current_loop
+            ):
                 await self.client.aclose()
 
             limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
