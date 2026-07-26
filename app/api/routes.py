@@ -1,16 +1,14 @@
 """API route definitions."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, validator
-from datetime import datetime, timezone
 
-from app.core.config import settings
 from app.core.logging import get_request_id, logger
-from app.services.audit_service import audit_service, AuditError
-
+from app.services.audit_service import AuditError, audit_service
 
 router = APIRouter()
 
@@ -20,6 +18,7 @@ STATIC_DIR = Path(__file__).parent.parent.parent / "static"
 
 class AuditRequest(BaseModel):
     """Request model for URL audit."""
+
     url: str
 
     @validator("url")
@@ -57,9 +56,9 @@ async def audit_url(request: Request, audit_req: AuditRequest):
                 "error": {
                     "code": e.code,
                     "message": e.message,
-                    "request_id": request_id
+                    "request_id": request_id,
                 }
-            }
+            },
         )
     except Exception as e:
         logger.error(f"Unexpected error during audit: {e}")
@@ -69,9 +68,9 @@ async def audit_url(request: Request, audit_req: AuditRequest):
                 "error": {
                     "code": "INTERNAL_ERROR",
                     "message": "An unexpected error occurred",
-                    "request_id": request_id
+                    "request_id": request_id,
                 }
-            }
+            },
         )
 
     # Set cache header
@@ -98,7 +97,7 @@ async def health_check():
         "status": status,
         "version": "1.0.0",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "checks": checks
+        "checks": checks,
     }
 
 

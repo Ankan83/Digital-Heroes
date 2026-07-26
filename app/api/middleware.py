@@ -8,7 +8,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from app.core.logging import set_request_id, get_request_id, logger
+from app.core.logging import get_request_id, logger, set_request_id
 from app.utils.rate_limiter import rate_limiter
 
 
@@ -29,7 +29,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         start_time = time.time()
-        request_id = get_request_id()
 
         response = await call_next(request)
 
@@ -59,10 +58,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "error": {
                         "code": "RATE_LIMIT_EXCEEDED",
                         "message": "Rate limit exceeded. Please slow down.",
-                        "request_id": request_id
+                        "request_id": request_id,
                     }
                 },
-                headers={"Retry-After": "60"}
+                headers={"Retry-After": "60"},
             )
 
         return await call_next(request)
@@ -95,9 +94,9 @@ class TimeoutMiddleware(BaseHTTPMiddleware):
                     "error": {
                         "code": "REQUEST_TIMEOUT",
                         "message": "Request timed out",
-                        "request_id": request_id
+                        "request_id": request_id,
                     }
-                }
+                },
             )
 
 

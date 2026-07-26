@@ -2,18 +2,20 @@
 
 import asyncio
 import time
-from typing import Optional, Dict, Any
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
 
 import httpx
+
 from app.core.config import settings
-from app.core.logging import logger, get_request_id
-from app.utils.validator import validate_url, ValidationError
+from app.core.logging import logger
 from app.utils.cache import Cache, create_cache
+from app.utils.validator import ValidationError, validate_url
 
 
 class AuditError(Exception):
     """Raised when audit fails."""
+
     def __init__(self, code: str, message: str):
         self.code = code
         self.message = message
@@ -31,10 +33,7 @@ class AuditService:
         limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
         self.client = httpx.AsyncClient(
             timeout=httpx.Timeout(
-                connect=5.0,
-                read=settings.audit_timeout_seconds,
-                write=5.0,
-                pool=5.0
+                connect=5.0, read=settings.audit_timeout_seconds, write=5.0, pool=5.0
             ),
             limits=limits,
             follow_redirects=True,
@@ -88,9 +87,15 @@ class AuditService:
         try:
             response = await self.client.get(url)
         except httpx.TimeoutException:
-            raise AuditError("TIMEOUT", f"Request to {url} timed out after {settings.audit_timeout_seconds}s")
+            raise AuditError(
+                "TIMEOUT",
+                f"Request to {url} timed out after {settings.audit_timeout_seconds}s",
+            )
         except httpx.TooManyRedirects:
-            raise AuditError("TOO_MANY_REDIRECTS", f"Too many redirects (max: {settings.max_redirect_count})")
+            raise AuditError(
+                "TOO_MANY_REDIRECTS",
+                f"Too many redirects (max: {settings.max_redirect_count})",
+            )
         except httpx.RequestError as e:
             raise AuditError("REQUEST_FAILED", f"Failed to fetch URL: {str(e)}")
 

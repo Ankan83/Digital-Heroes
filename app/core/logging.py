@@ -4,7 +4,6 @@ import logging
 import sys
 import uuid
 from contextvars import ContextVar
-from typing import Any
 
 from app.core.config import settings
 
