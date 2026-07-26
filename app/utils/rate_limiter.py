@@ -1,8 +1,8 @@
 """Token bucket rate limiter per client IP."""
 
 import time
-from threading import Lock
 from collections import defaultdict
+from threading import Lock
 from typing import Dict
 
 from app.core.config import settings
@@ -12,7 +12,7 @@ class TokenBucket:
     """Token bucket for rate limiting."""
 
     def __init__(self, rate: float, capacity: int):
-        self.rate = rate          # tokens per second
+        self.rate = rate  # tokens per second
         self.capacity = capacity  # max burst
         self.tokens = float(capacity)
         self.last_update = time.time()
@@ -37,9 +37,7 @@ class RateLimiter:
     def __init__(self):
         rate = settings.rate_limit_per_minute / 60.0
         capacity = settings.rate_limit_burst
-        self.buckets: Dict[str, TokenBucket] = defaultdict(
-            lambda: TokenBucket(rate, capacity)
-        )
+        self.buckets: Dict[str, TokenBucket] = defaultdict(lambda: TokenBucket(rate, capacity))
         self.lock = Lock()
 
     def is_allowed(self, client_ip: str) -> bool:

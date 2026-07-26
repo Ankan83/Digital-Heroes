@@ -6,16 +6,16 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.core.config import settings
-from app.core.logging import logger
-from app.api.routes import router
+from app.api.middleware import CORSMiddleware as CustomCORSMiddleware
 from app.api.middleware import (
-    RequestIDMiddleware,
     LoggingMiddleware,
     RateLimitMiddleware,
+    RequestIDMiddleware,
     TimeoutMiddleware,
-    CORSMiddleware as CustomCORSMiddleware,
 )
+from app.api.routes import router
+from app.core.config import settings
+from app.core.logging import logger
 from app.services.audit_service import audit_service
 
 
@@ -55,6 +55,7 @@ app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.host,

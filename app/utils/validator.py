@@ -3,18 +3,36 @@
 import socket
 from urllib.parse import urlparse
 
-
 BLOCKED_HOSTS = [
-    "localhost", "127.0.0.1", "0.0.0.0", "::1",
-    "10.", "172.16.", "172.17.", "172.18.", "172.19.",
-    "172.20.", "172.21.", "172.22.", "172.23.", "172.24.",
-    "172.25.", "172.26.", "172.27.", "172.28.", "172.29.",
-    "172.30.", "172.31.", "192.168.", "169.254.",
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "::1",
+    "10.",
+    "172.16.",
+    "172.17.",
+    "172.18.",
+    "172.19.",
+    "172.20.",
+    "172.21.",
+    "172.22.",
+    "172.23.",
+    "172.24.",
+    "172.25.",
+    "172.26.",
+    "172.27.",
+    "172.28.",
+    "172.29.",
+    "172.30.",
+    "172.31.",
+    "192.168.",
+    "169.254.",
 ]
 
 
 class ValidationError(Exception):
     """Raised when URL validation fails."""
+
     def __init__(self, message: str, code: str = "INVALID_URL"):
         self.code = code
         self.message = message
@@ -67,7 +85,7 @@ def validate_url(raw_url: str) -> str:
     if _is_blocked_host(host):
         raise ValidationError(
             "Access to internal or reserved addresses is not allowed",
-            code="FORBIDDEN_URL"
+            code="FORBIDDEN_URL",
         )
 
     # DNS resolution check to prevent DNS rebinding
@@ -78,7 +96,7 @@ def validate_url(raw_url: str) -> str:
             if _is_blocked_host(ip):
                 raise ValidationError(
                     "Access to internal or reserved addresses is not allowed",
-                    code="FORBIDDEN_URL"
+                    code="FORBIDDEN_URL",
                 )
     except socket.gaierror:
         # If DNS fails, we allow it (the audit will catch the actual failure)
@@ -86,8 +104,10 @@ def validate_url(raw_url: str) -> str:
 
     # Reconstruct normalized URL
     normalized = f"{parsed.scheme}://{host}"
-    if parsed.port and not ((parsed.scheme == "http" and parsed.port == 80) or 
-                            (parsed.scheme == "https" and parsed.port == 443)):
+    if parsed.port and not (
+        (parsed.scheme == "http" and parsed.port == 80)
+        or (parsed.scheme == "https" and parsed.port == 443)
+    ):
         normalized += f":{parsed.port}"
     if parsed.path:
         normalized += parsed.path

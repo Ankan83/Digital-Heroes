@@ -3,9 +3,10 @@
 import json
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 import redis
+
 from app.core.config import settings
 from app.core.logging import logger
 

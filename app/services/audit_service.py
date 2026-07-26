@@ -2,18 +2,20 @@
 
 import asyncio
 import time
-from typing import Optional, Dict, Any
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
 
 import httpx
+
 from app.core.config import settings
-from app.core.logging import logger, get_request_id
-from app.utils.validator import validate_url, ValidationError
+from app.core.logging import logger
 from app.utils.cache import Cache, create_cache
+from app.utils.validator import ValidationError, validate_url
 
 
 class AuditError(Exception):
     """Raised when audit fails."""
+
     def __init__(self, code: str, message: str):
         self.code = code
         self.message = message
@@ -27,19 +29,34 @@ class AuditService:
         self.cache = cache or create_cache()
         self.semaphore = asyncio.Semaphore(settings.max_concurrency)
 
-        # Configure HTTP client with timeouts and redirect limits
-        limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
-        self.client = httpx.AsyncClient(
-            timeout=httpx.Timeout(
-                connect=5.0,
-                read=settings.audit_timeout_seconds,
-                write=5.0,
-                pool=5.0
-            ),
-            limits=limits,
-            follow_redirects=True,
-            headers={"User-Agent": "URL-Audit-Service/1.0"},
-        )
+        # Lazily created per event loop to avoid cross-loop reuse issues.
+        self.client: Optional[httpx.AsyncClient] = None
+        self.client_loop: Optional[asyncio.AbstractEventLoop] = None
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get an HTTP client bound to the current event loop."""
+        current_loop = asyncio.get_running_loop()
+
+        if self.client is None or self.client.is_closed or self.client_loop is not current_loop:
+            if (
+                self.client is not None
+                and not self.client.is_closed
+                and self.client_loop is current_loop
+            ):
+                await self.client.aclose()
+
+            limits = httpx.Limits(max_connections=100, max_keepalive_connections=20)
+            self.client = httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    connect=5.0, read=settings.audit_timeout_seconds, write=5.0, pool=5.0
+                ),
+                limits=limits,
+                follow_redirects=True,
+                headers={"User-Agent": "URL-Audit-Service/1.0"},
+            )
+            self.client_loop = current_loop
+
+        return self.client
 
     async def audit(self, raw_url: str, request_id: str) -> Dict[str, Any]:
         """
@@ -84,13 +101,20 @@ class AuditService:
     async def _perform_audit(self, url: str, request_id: str) -> Dict[str, Any]:
         """Perform the actual HTTP audit."""
         start_time = time.time()
+        client = await self._get_client()
 
         try:
-            response = await self.client.get(url)
+            response = await client.get(url)
         except httpx.TimeoutException:
-            raise AuditError("TIMEOUT", f"Request to {url} timed out after {settings.audit_timeout_seconds}s")
+            raise AuditError(
+                "TIMEOUT",
+                f"Request to {url} timed out after {settings.audit_timeout_seconds}s",
+            )
         except httpx.TooManyRedirects:
-            raise AuditError("TOO_MANY_REDIRECTS", f"Too many redirects (max: {settings.max_redirect_count})")
+            raise AuditError(
+                "TOO_MANY_REDIRECTS",
+                f"Too many redirects (max: {settings.max_redirect_count})",
+            )
         except httpx.RequestError as e:
             raise AuditError("REQUEST_FAILED", f"Failed to fetch URL: {str(e)}")
 
@@ -116,7 +140,10 @@ class AuditService:
 
     async def close(self):
         """Close the HTTP client."""
-        await self.client.aclose()
+        if self.client is not None and not self.client.is_closed:
+            await self.client.aclose()
+        self.client = None
+        self.client_loop = None
 
 
 # Global service instance

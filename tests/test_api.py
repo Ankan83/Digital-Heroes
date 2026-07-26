@@ -1,11 +1,9 @@
 """Tests for API endpoints."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.audit_service import audit_service
-
 
 client = TestClient(app)
 
@@ -37,7 +35,7 @@ class TestAuditEndpoint:
         assert "url" in data
         assert "status_code" in data
         assert "response_time_ms" in data
-        assert data["cached"] == False
+        assert data["cached"] is False
         assert "request_id" in data
 
     def test_audit_missing_url(self):

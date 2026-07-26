@@ -1,7 +1,8 @@
 """Tests for URL validator."""
 
 import pytest
-from app.utils.validator import validate_url, ValidationError
+
+from app.utils.validator import ValidationError, validate_url
 
 
 class TestValidateURL:
