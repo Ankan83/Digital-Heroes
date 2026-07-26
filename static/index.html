@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Audit Service</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 URL Audit Service</h1>
+        <p class="subtitle">Production-grade URL auditing with caching, rate limiting, and security</p>
+
+        <div class="input-group">
+            <label for="url">URL to Audit</label>
+            <input type="text" id="url" placeholder="https://example.com" value="https://google.com">
+        </div>
+
+        <button onclick="auditURL()" id="auditBtn">
+            <span id="btnText">Audit URL</span>
+        </button>
+
+        <div id="result" class="result">
+            <h3 id="resultTitle"></h3>
+            <pre id="resultBody"></pre>
+        </div>
+
+        <div class="meta">
+            <div class="meta-item"><span>API Version</span><span>v1.0.0</span></div>
+            <div class="meta-item"><span>Rate Limit</span><span>60 req/min</span></div>
+            <div class="meta-item"><span>Cache TTL</span><span>5 minutes</span></div>
+            <div class="meta-item"><span>Timeout</span><span>10 seconds</span></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Built for <a href="https://digitalheroesco.com" target="_blank">Digital Heroes Training Task</a></p>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
