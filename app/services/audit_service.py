@@ -37,11 +37,7 @@ class AuditService:
         """Get an HTTP client bound to the current event loop."""
         current_loop = asyncio.get_running_loop()
 
-        if (
-            self.client is None
-            or self.client.is_closed
-            or self.client_loop is not current_loop
-        ):
+        if self.client is None or self.client.is_closed or self.client_loop is not current_loop:
             if self.client is not None and not self.client.is_closed:
                 await self.client.aclose()
 
